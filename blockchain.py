@@ -48,25 +48,6 @@ class Blockchain:
             else:
                 new_nonce+=1
         return new_nonce
-
-    def get_previous_block(self):
-        return self.chain[-1]
-    
-    def hash(self, block):
-        encode_block = json.dumps(block, sort_keys=True).encode()
-        return hashlib.sha256(encode_block).hexdigest()
-    
-    def proof_of_work(self, previous_nonce):
-        new_nonce = 1
-        check_proof = False
-
-        while check_proof is False:
-            hashOperation = hashlib.sha256(str(new_nonce**2 - previous_nonce**2).encode()).hexdigest()
-            if hashOperation[:4] == "0000":
-                check_proof = True
-            else:
-                new_nonce+=1
-        return new_nonce
     
 # web server
 app = Flask(__name__)
