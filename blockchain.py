@@ -8,6 +8,7 @@ class Blockchain:
     def __init__(self):
         # list of block 
         self.chain = []
+        self.transaction = 0 # amount
         # genesis block
         self.create_block(nonce=1, previous_hash="0")
 
@@ -15,10 +16,11 @@ class Blockchain:
     def create_block(self, nonce, previous_hash):
         # detail block
         block ={
-            "index":len(self.chain)+1, 
-            "timestamp":str(datetime.datetime.now()), 
-            "nonce":nonce, 
-            "previous_hash":previous_hash,  
+            "index": len(self.chain)+1, 
+            "timestamp": str(datetime.datetime.now()), 
+            "nonce": nonce, 
+            "data": self.transaction, 
+            "previous_hash": previous_hash,  
         }
         self.chain.append(block)
         return block
@@ -42,13 +44,38 @@ class Blockchain:
         # mathematical problems
         while check_proof is False:
             # get 16 number base
-            hashOperation = hashlib.sha256(str(new_nonce**2 - previous_nonce**2).encode()).hexdigest()
+            hashOperation = hashlib.sha256(str(new_nonce**2 - previous_nonce**2).encode()).hexdigest() # must same number
+
             if hashOperation[:4] == "0000":
                 check_proof=True
             else:
                 new_nonce+=1
+
         return new_nonce
     
+    # validate block
+    def is_chain_valid(self, chain):
+        previous_block = chain[0]
+        block_index = 1
+
+        while block_index < len(chain):
+            block = chain[block_index] # checked block
+            
+            if block["previous_hash"] != self.hash(previous_block):
+                return False
+            
+            previous_nonce = previous_block["nonce"] # nonce of previous block
+            nonce = block["nonce"] # nonce of validate block
+            hashOperation = hashlib.sha256(str(nonce**2 - previous_nonce**2).encode()).hexdigest() # must same number
+            
+            if hashOperation[:4] != "0000":
+                return False
+
+            previous_block = block
+            block_index+=1
+        
+        return True
+
 # web server
 app = Flask(__name__)
 
@@ -70,6 +97,8 @@ def get_chain():
 
 @app.route('/mining', methods = ["GET"])
 def mining_block():
+    amount = 1000000
+    blockchain.transaction = blockchain.transaction+amount
     # pow
     previous_block = blockchain.get_previous_block()
     previous_nonce = previous_block["nonce"]
@@ -86,9 +115,19 @@ def mining_block():
         "message": "Mining Block Compeleted", 
         "index": block["index"], 
         "timestamp": block["timestamp"], 
+        "data": block["data"], 
         "nonce": block["nonce"], 
         "previous_hash": block["previous_hash"]
     }
+    return jsonify(response), 200
+
+@app.route('/is_valid', methods = ["GET"])
+def is_valid():
+    is_valid = blockchain.is_chain_valid(blockchain.chain)
+    if is_valid:
+        response={"message": "Blockchain Valid"}
+    else:
+        response={"message": "Have a Problem, Blockchain Is Not Valid"}
     return jsonify(response), 200
 
 # run server
